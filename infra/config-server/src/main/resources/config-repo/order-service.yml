@@ -1,0 +1,4 @@
+payflow:
+  saga:
+    timeout: PT2M
+    sweep-ms: 30000

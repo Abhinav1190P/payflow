@@ -1,0 +1,44 @@
+spring:
+  application:
+    name: payment-service
+  config:
+    import: "classpath:payflow-defaults.yml,optional:configserver:${CONFIG_SERVER_URL:http://localhost:8888}"
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:55433/payment}
+    username: ${DB_USER:payflow}
+    password: ${DB_PASSWORD:payflow}
+
+server:
+  port: ${PORT:8082}
+
+payflow:
+  wallet:
+    currency: INR
+    max-top-up-minor: 10000000
+
+resilience4j:
+  retry:
+    instances:
+      auth-service:
+        max-attempts: 3
+        wait-duration: 200ms
+        enable-exponential-backoff: true
+        exponential-backoff-multiplier: 2
+        ignore-exceptions:
+          - com.payflow.common.error.NotFoundException
+  circuitbreaker:
+    instances:
+      auth-service:
+        sliding-window-size: 20
+        minimum-number-of-calls: 10
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 10s
+        permitted-number-of-calls-in-half-open-state: 3
+        ignore-exceptions:
+          - com.payflow.common.error.NotFoundException
+  ratelimiter:
+    instances:
+      auth-service:
+        limit-for-period: 50
+        limit-refresh-period: 1s
+        timeout-duration: 0

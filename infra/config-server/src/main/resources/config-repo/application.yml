@@ -1,0 +1,8 @@
+# Shared by every service (overrides payflow-defaults.yml baked into the jars).
+payflow:
+  jwt:
+    ttl: 60m
+
+logging:
+  level:
+    org.apache.kafka: WARN

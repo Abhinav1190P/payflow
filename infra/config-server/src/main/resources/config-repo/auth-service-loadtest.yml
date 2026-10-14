@@ -1,0 +1,5 @@
+# Active only when auth-service runs with the "loadtest" profile: all k6 virtual users share one IP,
+# so the normal 10 sign-ups/minute/IP limit would block the test itself.
+payflow:
+  rate-limit:
+    login-max-requests: 100000

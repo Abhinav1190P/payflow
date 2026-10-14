@@ -1,0 +1,3 @@
+payflow:
+  wallet:
+    max-top-up-minor: 10000000

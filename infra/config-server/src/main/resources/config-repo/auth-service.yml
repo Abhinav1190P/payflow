@@ -1,0 +1,4 @@
+payflow:
+  rate-limit:
+    login-max-requests: 10
+    login-window: 1m

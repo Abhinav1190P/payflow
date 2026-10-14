@@ -1,0 +1,7 @@
+**/target
+.git
+.github
+docs
+ui
+k8s
+load-tests

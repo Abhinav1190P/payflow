@@ -1,0 +1,461 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: discovery-server
+  namespace: payflow
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: discovery-server }
+  template:
+    metadata:
+      labels: { app: discovery-server }
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/path: /actuator/prometheus
+        prometheus.io/port: "8761"
+    spec:
+      containers:
+        - name: discovery-server
+          image: payflow/discovery-server:latest
+          ports:
+            - containerPort: 8761
+          envFrom:
+            - configMapRef: { name: payflow-config }
+            - secretRef: { name: payflow-secrets }
+          env:
+            - name: PORT
+              value: "8761"
+          resources:
+            requests: { cpu: 250m, memory: 384Mi }
+            limits: { cpu: "1", memory: 768Mi }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: discovery-server
+  namespace: payflow
+spec:
+  selector: { app: discovery-server }
+  ports:
+    - port: 8761
+      targetPort: 8761
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: config-server
+  namespace: payflow
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: config-server }
+  template:
+    metadata:
+      labels: { app: config-server }
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/path: /actuator/prometheus
+        prometheus.io/port: "8888"
+    spec:
+      containers:
+        - name: config-server
+          image: payflow/config-server:latest
+          ports:
+            - containerPort: 8888
+          envFrom:
+            - configMapRef: { name: payflow-config }
+            - secretRef: { name: payflow-secrets }
+          env:
+            - name: PORT
+              value: "8888"
+          resources:
+            requests: { cpu: 250m, memory: 384Mi }
+            limits: { cpu: "1", memory: 768Mi }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: config-server
+  namespace: payflow
+spec:
+  selector: { app: config-server }
+  ports:
+    - port: 8888
+      targetPort: 8888
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api-gateway
+  namespace: payflow
+spec:
+  replicas: 2
+  selector:
+    matchLabels: { app: api-gateway }
+  template:
+    metadata:
+      labels: { app: api-gateway }
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/path: /actuator/prometheus
+        prometheus.io/port: "8080"
+    spec:
+      containers:
+        - name: api-gateway
+          image: payflow/api-gateway:latest
+          ports:
+            - containerPort: 8080
+          envFrom:
+            - configMapRef: { name: payflow-config }
+            - secretRef: { name: payflow-secrets }
+          env:
+            - name: PORT
+              value: "8080"
+          resources:
+            requests: { cpu: 250m, memory: 384Mi }
+            limits: { cpu: "1", memory: 768Mi }
+          readinessProbe:
+            httpGet: { path: /actuator/health/readiness, port: 8080 }
+            initialDelaySeconds: 20
+            periodSeconds: 10
+          livenessProbe:
+            httpGet: { path: /actuator/health/liveness, port: 8080 }
+            initialDelaySeconds: 40
+            periodSeconds: 20
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: api-gateway
+  namespace: payflow
+spec:
+  selector: { app: api-gateway }
+  ports:
+    - port: 8080
+      targetPort: 8080
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: api-gateway
+  namespace: payflow
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: api-gateway
+  minReplicas: 2
+  maxReplicas: 6
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: auth-service
+  namespace: payflow
+spec:
+  replicas: 2
+  selector:
+    matchLabels: { app: auth-service }
+  template:
+    metadata:
+      labels: { app: auth-service }
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/path: /actuator/prometheus
+        prometheus.io/port: "8081"
+    spec:
+      containers:
+        - name: auth-service
+          image: payflow/auth-service:latest
+          ports:
+            - containerPort: 8081
+          envFrom:
+            - configMapRef: { name: payflow-config }
+            - secretRef: { name: payflow-secrets }
+          env:
+            - name: PORT
+              value: "8081"
+            - name: DB_URL
+              value: jdbc:postgresql://postgres:5432/auth
+          resources:
+            requests: { cpu: 250m, memory: 384Mi }
+            limits: { cpu: "1", memory: 768Mi }
+          readinessProbe:
+            httpGet: { path: /actuator/health/readiness, port: 8081 }
+            initialDelaySeconds: 20
+            periodSeconds: 10
+          livenessProbe:
+            httpGet: { path: /actuator/health/liveness, port: 8081 }
+            initialDelaySeconds: 40
+            periodSeconds: 20
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: auth-service
+  namespace: payflow
+spec:
+  selector: { app: auth-service }
+  ports:
+    - port: 8081
+      targetPort: 8081
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: payment-service
+  namespace: payflow
+spec:
+  replicas: 2
+  selector:
+    matchLabels: { app: payment-service }
+  template:
+    metadata:
+      labels: { app: payment-service }
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/path: /actuator/prometheus
+        prometheus.io/port: "8082"
+    spec:
+      containers:
+        - name: payment-service
+          image: payflow/payment-service:latest
+          ports:
+            - containerPort: 8082
+          envFrom:
+            - configMapRef: { name: payflow-config }
+            - secretRef: { name: payflow-secrets }
+          env:
+            - name: PORT
+              value: "8082"
+            - name: DB_URL
+              value: jdbc:postgresql://postgres:5432/payment
+          resources:
+            requests: { cpu: 250m, memory: 384Mi }
+            limits: { cpu: "1", memory: 768Mi }
+          readinessProbe:
+            httpGet: { path: /actuator/health/readiness, port: 8082 }
+            initialDelaySeconds: 20
+            periodSeconds: 10
+          livenessProbe:
+            httpGet: { path: /actuator/health/liveness, port: 8082 }
+            initialDelaySeconds: 40
+            periodSeconds: 20
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: payment-service
+  namespace: payflow
+spec:
+  selector: { app: payment-service }
+  ports:
+    - port: 8082
+      targetPort: 8082
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: payment-service
+  namespace: payflow
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: payment-service
+  minReplicas: 2
+  maxReplicas: 6
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: inventory-service
+  namespace: payflow
+spec:
+  replicas: 2
+  selector:
+    matchLabels: { app: inventory-service }
+  template:
+    metadata:
+      labels: { app: inventory-service }
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/path: /actuator/prometheus
+        prometheus.io/port: "8083"
+    spec:
+      containers:
+        - name: inventory-service
+          image: payflow/inventory-service:latest
+          ports:
+            - containerPort: 8083
+          envFrom:
+            - configMapRef: { name: payflow-config }
+            - secretRef: { name: payflow-secrets }
+          env:
+            - name: PORT
+              value: "8083"
+            - name: DB_URL
+              value: jdbc:postgresql://postgres:5432/inventory
+          resources:
+            requests: { cpu: 250m, memory: 384Mi }
+            limits: { cpu: "1", memory: 768Mi }
+          readinessProbe:
+            httpGet: { path: /actuator/health/readiness, port: 8083 }
+            initialDelaySeconds: 20
+            periodSeconds: 10
+          livenessProbe:
+            httpGet: { path: /actuator/health/liveness, port: 8083 }
+            initialDelaySeconds: 40
+            periodSeconds: 20
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: inventory-service
+  namespace: payflow
+spec:
+  selector: { app: inventory-service }
+  ports:
+    - port: 8083
+      targetPort: 8083
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: order-service
+  namespace: payflow
+spec:
+  replicas: 2
+  selector:
+    matchLabels: { app: order-service }
+  template:
+    metadata:
+      labels: { app: order-service }
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/path: /actuator/prometheus
+        prometheus.io/port: "8084"
+    spec:
+      containers:
+        - name: order-service
+          image: payflow/order-service:latest
+          ports:
+            - containerPort: 8084
+          envFrom:
+            - configMapRef: { name: payflow-config }
+            - secretRef: { name: payflow-secrets }
+          env:
+            - name: PORT
+              value: "8084"
+            - name: DB_URL
+              value: jdbc:postgresql://postgres:5432/orders
+          resources:
+            requests: { cpu: 250m, memory: 384Mi }
+            limits: { cpu: "1", memory: 768Mi }
+          readinessProbe:
+            httpGet: { path: /actuator/health/readiness, port: 8084 }
+            initialDelaySeconds: 20
+            periodSeconds: 10
+          livenessProbe:
+            httpGet: { path: /actuator/health/liveness, port: 8084 }
+            initialDelaySeconds: 40
+            periodSeconds: 20
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: order-service
+  namespace: payflow
+spec:
+  selector: { app: order-service }
+  ports:
+    - port: 8084
+      targetPort: 8084
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: order-service
+  namespace: payflow
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: order-service
+  minReplicas: 2
+  maxReplicas: 6
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: notification-service
+  namespace: payflow
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: notification-service }
+  template:
+    metadata:
+      labels: { app: notification-service }
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/path: /actuator/prometheus
+        prometheus.io/port: "8085"
+    spec:
+      containers:
+        - name: notification-service
+          image: payflow/notification-service:latest
+          ports:
+            - containerPort: 8085
+          envFrom:
+            - configMapRef: { name: payflow-config }
+            - secretRef: { name: payflow-secrets }
+          env:
+            - name: PORT
+              value: "8085"
+            - name: DB_URL
+              value: jdbc:postgresql://postgres:5432/notifications
+          resources:
+            requests: { cpu: 250m, memory: 384Mi }
+            limits: { cpu: "1", memory: 768Mi }
+          readinessProbe:
+            httpGet: { path: /actuator/health/readiness, port: 8085 }
+            initialDelaySeconds: 20
+            periodSeconds: 10
+          livenessProbe:
+            httpGet: { path: /actuator/health/liveness, port: 8085 }
+            initialDelaySeconds: 40
+            periodSeconds: 20
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: notification-service
+  namespace: payflow
+spec:
+  selector: { app: notification-service }
+  ports:
+    - port: 8085
+      targetPort: 8085

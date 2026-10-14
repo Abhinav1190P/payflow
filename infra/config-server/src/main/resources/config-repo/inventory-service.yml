@@ -1,0 +1,3 @@
+payflow:
+  cache:
+    autocomplete-capacity: 256

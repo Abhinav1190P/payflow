@@ -1,0 +1,56 @@
+stages:
+  - test
+  - package
+
+variables:
+  MAVEN_OPTS: "-Dmaven.repo.local=$CI_PROJECT_DIR/.m2/repository"
+  DOCKER_HOST: "tcp://docker:2375"
+  DOCKER_TLS_CERTDIR: ""
+  TESTCONTAINERS_HOST_OVERRIDE: "docker"
+
+cache:
+  key: maven
+  paths:
+    - .m2/repository
+
+test:
+  stage: test
+  image: maven:3.9-eclipse-temurin-21
+  services:
+    - name: docker:27-dind
+      alias: docker
+  script:
+    - echo "api.version=1.44" > ~/.docker-java.properties
+    - mvn -B verify
+  artifacts:
+    when: always
+    paths:
+      - "**/target/site/jacoco/"
+    reports:
+      junit: "**/target/surefire-reports/TEST-*.xml"
+
+ui:
+  stage: test
+  image: node:20
+  script:
+    - cd ui && npm install && npm run build
+
+docker-images:
+  stage: package
+  image: docker:27
+  services:
+    - name: docker:27-dind
+      alias: docker
+  parallel:
+    matrix:
+      - MODULE:
+          - infra/discovery-server
+          - infra/config-server
+          - infra/api-gateway
+          - services/auth-service
+          - services/payment-service
+          - services/inventory-service
+          - services/order-service
+          - services/notification-service
+  script:
+    - docker build --build-arg MODULE=$MODULE -t payflow/$(basename $MODULE):$CI_COMMIT_SHORT_SHA .

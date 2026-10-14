@@ -1,0 +1,26 @@
+spring:
+  application:
+    name: inventory-service
+  config:
+    import: "classpath:payflow-defaults.yml,optional:configserver:${CONFIG_SERVER_URL:http://localhost:8888}"
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:55433/inventory}
+    username: ${DB_USER:payflow}
+    password: ${DB_PASSWORD:payflow}
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+  cache:
+    type: redis
+
+server:
+  port: ${PORT:8083}
+
+payflow:
+  security:
+    public-paths:
+      - GET /api/v1/products
+      - GET /api/v1/products/**
+  cache:
+    autocomplete-capacity: 256

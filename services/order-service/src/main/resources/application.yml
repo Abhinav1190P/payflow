@@ -1,0 +1,50 @@
+spring:
+  application:
+    name: order-service
+  config:
+    import: "classpath:payflow-defaults.yml,optional:configserver:${CONFIG_SERVER_URL:http://localhost:8888}"
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:55433/orders}
+    username: ${DB_USER:payflow}
+    password: ${DB_PASSWORD:payflow}
+
+server:
+  port: ${PORT:8084}
+
+payflow:
+  saga:
+    timeout: PT2M
+    sweep-ms: 30000
+  admin-ui:
+    username: ${ADMIN_UI_USER:admin}
+    password: ${ADMIN_UI_PASSWORD:Admin12345!}
+
+resilience4j:
+  retry:
+    instances:
+      inventory-service:
+        max-attempts: 3
+        wait-duration: 200ms
+        enable-exponential-backoff: true
+        exponential-backoff-multiplier: 2
+      payment-service:
+        max-attempts: 2
+        wait-duration: 200ms
+  circuitbreaker:
+    instances:
+      inventory-service:
+        sliding-window-size: 20
+        minimum-number-of-calls: 10
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 10s
+      payment-service:
+        sliding-window-size: 20
+        minimum-number-of-calls: 10
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 10s
+  ratelimiter:
+    instances:
+      inventory-service:
+        limit-for-period: 100
+        limit-refresh-period: 1s
+        timeout-duration: 100ms

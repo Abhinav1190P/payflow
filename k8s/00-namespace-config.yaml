@@ -1,0 +1,29 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: payflow
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: payflow-config
+  namespace: payflow
+data:
+  SPRING_PROFILES_ACTIVE: k8s
+  DB_USER: payflow
+  KAFKA_BOOTSTRAP: kafka:9092
+  EUREKA_URL: http://discovery-server:8761/eureka
+  CONFIG_SERVER_URL: http://config-server:8888
+  ZIPKIN_URL: http://zipkin:9411/api/v2/spans
+  REDIS_HOST: redis
+---
+# Example only: create real secrets with `kubectl create secret generic payflow-secrets ...` (never commit them).
+apiVersion: v1
+kind: Secret
+metadata:
+  name: payflow-secrets
+  namespace: payflow
+type: Opaque
+stringData:
+  DB_PASSWORD: change-me
+  PAYFLOW_JWT_SECRET: change-me-to-a-long-random-string-of-32-plus-chars

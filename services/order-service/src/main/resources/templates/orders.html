@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>PayFlow · Orders</title>
+    <style>
+        body { font-family: system-ui, sans-serif; margin: 24px; color: #1f2328; }
+        table { border-collapse: collapse; width: 100%; }
+        th, td { border-bottom: 1px solid #ddd; padding: 6px 8px; text-align: left; font-size: 14px; }
+        .filters a { margin-right: 12px; }
+        .muted { color: #666; }
+    </style>
+</head>
+<body>
+<h1>Orders</h1>
+<p class="muted">Last 200 orders. Counts by status:</p>
+<div class="filters">
+    <a th:href="@{/admin-ui/orders}">All</a>
+    <a th:each="s : ${statuses}" th:href="@{/admin-ui/orders(status=${s})}"
+       th:text="|${s} (${counts.getOrDefault(s, 0L)})|">STATUS (0)</a>
+</div>
+<table>
+    <thead>
+    <tr><th>Created</th><th>Order</th><th>User</th><th>Status</th><th>Total (minor)</th><th>Reason</th></tr>
+    </thead>
+    <tbody>
+    <tr th:each="o : ${orders}">
+        <td th:text="${o.createdAt}">time</td>
+        <td th:text="${o.id}">id</td>
+        <td th:text="${o.userId}">user</td>
+        <td th:text="${o.status}">status</td>
+        <td th:text="${o.totalMinor}">0</td>
+        <td th:text="${o.cancelReason}"></td>
+    </tr>
+    <tr th:if="${#lists.isEmpty(orders)}"><td colspan="6" class="muted">No orders.</td></tr>
+    </tbody>
+</table>
+</body>
+</html>

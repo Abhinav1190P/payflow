@@ -1,0 +1,25 @@
+spring:
+  cache:
+    type: simple
+  cloud:
+    config:
+      enabled: false
+    discovery:
+      enabled: false
+  kafka:
+    listener:
+      auto-startup: false
+
+eureka:
+  client:
+    enabled: false
+
+management:
+  tracing:
+    enabled: false
+
+spring.kafka.admin.auto-create: false
+
+payflow:
+  outbox:
+    relay-enabled: false

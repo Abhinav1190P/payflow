@@ -1,0 +1,16 @@
+spring:
+  application:
+    name: notification-service
+  config:
+    import: "classpath:payflow-defaults.yml,optional:configserver:${CONFIG_SERVER_URL:http://localhost:8888}"
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:55433/notifications}
+    username: ${DB_USER:payflow}
+    password: ${DB_PASSWORD:payflow}
+
+server:
+  port: ${PORT:8085}
+
+payflow:
+  outbox:
+    relay-enabled: false
